@@ -48,64 +48,6 @@ describe('compose()', () => {
         done();
     });
 
-    it('returns a promise if no options and no callback is provided', (done) => {
-
-        const manifest = {};
-
-        Glue.compose(manifest).then((server) => {
-
-            expect(server.connections).length(1);
-            done();
-        });
-    });
-
-    it('returns a promise if no callback is provided', (done) => {
-
-        const manifest = {};
-        const options = {};
-
-        Glue.compose(manifest, options).then((server) => {
-
-            expect(server.connections).length(1);
-            done();
-        });
-    });
-
-    it('rejects a promise if an error is thrown', (done) => {
-
-        const manifest = {
-            registrations: [
-                {
-                    plugin: './invalid-plugin'
-                }
-            ]
-        };
-
-        Glue.compose(manifest).catch((err) => {
-
-            expect(err).to.exist();
-            expect(err.code).to.equal('MODULE_NOT_FOUND');
-            done();
-        });
-    });
-
-    it('rejects a promise if an error is returned', (done) => {
-
-        const manifest = {};
-        const options = {
-            preRegister: function (server, callback) {
-
-                callback({ error: 'failed' });
-            }
-        };
-
-        Glue.compose(manifest, options).then(null, (err) => {
-
-            expect(err).to.exist();
-            done();
-        });
-    });
-
     it('composes a server with server.cache as a string', (done) => {
 
         const manifest = {
@@ -521,129 +463,322 @@ describe('compose()', () => {
             done();
         });
     });
+    
+    describe('with errors', () => {
 
-    it('errors on failed pre handler', (done) => {
-
-        const manifest = {};
-        const options = {
-            preRegister: function (server, callback) {
-
-                callback({ error: 'failed' });
-            }
-        };
-
-        Glue.compose(manifest, options, (err, server) => {
-
-            expect(err).to.exist();
+        it('errors on failed pre handler', (done) => {
+    
+            const manifest = {};
+            const options = {
+                preRegister: function (server, callback) {
+    
+                    callback({ error: 'failed' });
+                }
+            };
+    
+            Glue.compose(manifest, options, (err, server) => {
+    
+                expect(err).to.exist();
+                done();
+            });
+        });
+    
+        it('throws on bogus options.realativeTo path (server.cache)', (done) => {
+    
+            const manifest = {
+                server: {
+                    cache: './catbox-memory'
+                }
+            };
+    
+            expect(() => {
+    
+                Glue.compose(manifest, { relativeTo: __dirname + '/badpath' }, () => { });
+            }).to.throw(/Cannot find module/);
+            done();
+        });
+    
+        it('throws on bogus options.realativeTo path (plugins)', (done) => {
+    
+            const manifest = {
+                registrations: [
+                    {
+                        plugin: './helloworld.js'
+                    }
+                ]
+            };
+    
+            expect(() => {
+    
+                Glue.compose(manifest, { relativeTo: __dirname + '/badpath' }, () => { });
+            }).to.throw(/Cannot find module/);
+            done();
+        });
+    
+        it('throws on options not an object', (done) => {
+    
+            const manifest = {};
+    
+            expect(() => {
+    
+                Glue.compose(manifest, 'hello', () => { });
+            }).to.throw(/Invalid options/);
+            done();
+        });
+    
+        it('throws on invalid manifest (not an object)', (done) => {
+    
+            const manifest = 'hello';
+    
+            expect(() => {
+    
+                Glue.compose(manifest, () => { });
+            }).to.throw(/Invalid manifest/);
+            done();
+        });
+    
+        it('throws on invalid manifest (server not an object)', (done) => {
+    
+            const manifest = {
+                server: 'hello'
+            };
+    
+            expect(() => {
+    
+                Glue.compose(manifest, () => { });
+            }).to.throw(/Invalid manifest/);
+            done();
+        });
+    
+        it('throws on invalid manifest (connections not an array)', (done) => {
+    
+            const manifest = {
+                connections: 'hello'
+            };
+    
+            expect(() => {
+    
+                Glue.compose(manifest, () => { });
+            }).to.throw(/Invalid manifest/);
+            done();
+        });
+    
+        it('throws on invalid manifest (connections array items not objects)', (done) => {
+    
+            const manifest = {
+                connections: [
+                    'hello'
+                ]
+            };
+    
+            expect(() => {
+    
+                Glue.compose(manifest, () => { });
+            }).to.throw(/Invalid manifest/);
+            done();
+        });
+    
+        it('throws on invalid manifest (registrations not an array)', (done) => {
+    
+            const manifest = {
+                registrations: 'hello'
+            };
+    
+            expect(() => {
+    
+                Glue.compose(manifest, () => { });
+            }).to.throw(/Invalid manifest/);
             done();
         });
     });
+    
+        
+    describe('with promises', () => {
 
-    it('throws on bogus options.realativeTo path (server.cache)', (done) => {
-
-        const manifest = {
-            server: {
-                cache: './catbox-memory'
-            }
-        };
-
-        expect(() => {
-
-            Glue.compose(manifest, { relativeTo: __dirname + '/badpath' }, () => { });
-        }).to.throw(/Cannot find module/);
-        done();
-    });
-
-    it('throws on bogus options.realativeTo path (plugins)', (done) => {
-
-        const manifest = {
-            registrations: [
-                {
-                    plugin: './helloworld.js'
+        it('returns a promise if no options and no callback is provided', (done) => {
+    
+            const manifest = {};
+    
+            Glue.compose(manifest).then((server) => {
+    
+                expect(server.connections).length(1);
+                done();
+            });
+        });
+    
+        it('returns a promise if no callback is provided', (done) => {
+    
+            const manifest = {};
+            const options = {};
+    
+            Glue.compose(manifest, options).then((server) => {
+    
+                expect(server.connections).length(1);
+                done();
+            });
+        });
+    
+        it('rejects a promise if an error is thrown', (done) => {
+    
+            const manifest = {
+                registrations: [
+                    {
+                        plugin: './invalid-plugin'
+                    }
+                ]
+            };
+    
+            Glue.compose(manifest)
+            .catch((err) => {
+    
+                expect(err).to.exist();
+                expect(err.code).to.equal('MODULE_NOT_FOUND');
+                done();
+            });
+        });
+    
+        it('rejects a promise if an error is returned', (done) => {
+    
+            const manifest = {};
+            const options = {
+                preRegister: function (server, callback) {
+    
+                    callback({ error: 'failed' });
                 }
-            ]
-        };
-
-        expect(() => {
-
-            Glue.compose(manifest, { relativeTo: __dirname + '/badpath' }, () => { });
-        }).to.throw(/Cannot find module/);
-        done();
-    });
-
-    it('throws on options not an object', (done) => {
-
-        const manifest = {};
-
-        expect(() => {
-
-            Glue.compose(manifest, 'hello', () => { });
-        }).to.throw(/Invalid options/);
-        done();
-    });
-
-    it('throws on invalid manifest (not an object)', (done) => {
-
-        const manifest = 'hello';
-
-        expect(() => {
-
-            Glue.compose(manifest, () => { });
-        }).to.throw(/Invalid manifest/);
-        done();
-    });
-
-    it('throws on invalid manifest (server not an object)', (done) => {
-
-        const manifest = {
-            server: 'hello'
-        };
-
-        expect(() => {
-
-            Glue.compose(manifest, () => { });
-        }).to.throw(/Invalid manifest/);
-        done();
-    });
-
-    it('throws on invalid manifest (connections not an array)', (done) => {
-
-        const manifest = {
-            connections: 'hello'
-        };
-
-        expect(() => {
-
-            Glue.compose(manifest, () => { });
-        }).to.throw(/Invalid manifest/);
-        done();
-    });
-
-    it('throws on invalid manifest (connections array items not objects)', (done) => {
-
-        const manifest = {
-            connections: [
-                'hello'
-            ]
-        };
-
-        expect(() => {
-
-            Glue.compose(manifest, () => { });
-        }).to.throw(/Invalid manifest/);
-        done();
-    });
-
-    it('throws on invalid manifest (registrations not an array)', (done) => {
-
-        const manifest = {
-            registrations: 'hello'
-        };
-
-        expect(() => {
-
-            Glue.compose(manifest, () => { });
-        }).to.throw(/Invalid manifest/);
-        done();
+            };
+    
+            Glue.compose(manifest, options).then(null, (err) => {
+    
+                expect(err).to.exist();
+                done();
+            });
+        });
+        
+        describe('that reject', () => {
+            
+            it('rejects on failed pre handler', (done) => {
+        
+                const manifest = {};
+                const options = {
+                    preRegister: function (server, callback) {
+        
+                        callback({ error: 'failed' });
+                    }
+                };
+        
+                Glue.compose(manifest, options)
+                .then(null, (err) => {
+                    expect(err).to.exist();
+                    done();
+                });
+            });
+        
+            it('rejects on bogus options.realativeTo path (server.cache)', (done) => {
+        
+                const manifest = {
+                    server: {
+                        cache: './catbox-memory'
+                    }
+                };
+        
+                Glue.compose(manifest, { relativeTo: __dirname + '/badpath' })
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on bogus options.realativeTo path (plugins)', (done) => {
+        
+                const manifest = {
+                    registrations: [
+                        {
+                            plugin: './helloworld.js'
+                        }
+                    ]
+                };
+        
+                Glue.compose(manifest, { relativeTo: __dirname + '/badpath' })
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on options not an object', (done) => {
+        
+                const manifest = {};
+                Glue.compose(manifest, 'hello')
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on invalid manifest (not an object)', (done) => {
+        
+                const manifest = 'hello';
+        
+                Glue.compose(manifest)
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on invalid manifest (server not an object)', (done) => {
+        
+                const manifest = {
+                    server: 'hello'
+                };
+        
+                Glue.compose(manifest)
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on invalid manifest (connections not an array)', (done) => {
+        
+                const manifest = {
+                    connections: 'hello'
+                };
+        
+                Glue.compose(manifest)
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on invalid manifest (connections array items not objects)', (done) => {
+        
+                const manifest = {
+                    connections: [
+                        'hello'
+                    ]
+                };
+        
+                Glue.compose(manifest)
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        
+            it('rejects on invalid manifest (registrations not an array)', (done) => {
+        
+                const manifest = {
+                    registrations: 'hello'
+                };
+        
+                Glue.compose(manifest)
+                    .then(null, (err) => {
+                        expect(err).to.exist();
+                        done();
+                    });
+            });
+        });
     });
 });
